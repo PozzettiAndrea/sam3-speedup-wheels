@@ -18,6 +18,10 @@ on:
         default: '2.4.0'
         type: string
 
+env:
+  DEFAULT_CUDA: '12.1'
+  DEFAULT_PYTORCH: '2.4.0'
+
 jobs:
   build:
     runs-on: windows-2022
