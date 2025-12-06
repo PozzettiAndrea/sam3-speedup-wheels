@@ -6,9 +6,9 @@ on:
       cuda_version:
         description: 'CUDA version'
         required: true
-        default: '12.1'
+        default: '12.1.0'
         type: choice
-        options: ['11.8', '12.1', '12.4']
+        options: ['11.8.0', '12.1.0', '12.4.0']
       pytorch_version:
         description: 'PyTorch version'
         required: true
@@ -38,8 +38,13 @@ jobs:
         shell: bash
         run: |
           CUDA_VER="${{ inputs.cuda_version }}"
+          # Extract major.minor (e.g., "12.1" from "12.1.0")
+          CUDA_SHORT=$(echo $CUDA_VER | cut -d. -f1,2)
+          # Remove dots for PyTorch wheel tag (e.g., "121" from "12.1")
+          CUDA_NODOT=$(echo $CUDA_SHORT | tr -d '.')
           echo "version=$CUDA_VER" >> $GITHUB_OUTPUT
-          echo "version_nodot=${CUDA_VER//.}" >> $GITHUB_OUTPUT
+          echo "version_short=$CUDA_SHORT" >> $GITHUB_OUTPUT
+          echo "version_nodot=$CUDA_NODOT" >> $GITHUB_OUTPUT
 
       - name: Setup CUDA ${{ inputs.cuda_version }}
         uses: Jimver/cuda-toolkit@v0.2.16
