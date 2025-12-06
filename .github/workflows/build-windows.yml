@@ -44,7 +44,7 @@ jobs:
         id: cuda
         shell: bash
         run: |
-          CUDA_VER="${{ inputs.cuda_version }}"
+          CUDA_VER="${{ inputs.cuda_version || env.DEFAULT_CUDA }}"
           CUDA_NODOT=$(echo $CUDA_VER | tr -d '.')
           echo "version=$CUDA_VER" >> $GITHUB_OUTPUT
           echo "version_nodot=$CUDA_NODOT" >> $GITHUB_OUTPUT
@@ -52,7 +52,7 @@ jobs:
       - name: Install CUDA toolkit
         shell: powershell
         run: |
-          $CUDA_VERSION = "${{ inputs.cuda_version }}"
+          $CUDA_VERSION = "${{ steps.cuda.outputs.version }}"
           $CUDA_VERSION_FULL = switch ($CUDA_VERSION) {
             "11.8" { "11.8.0" }
             "12.1" { "12.1.1" }
@@ -88,8 +88,9 @@ jobs:
       - name: Install PyTorch
         shell: bash
         run: |
+          PYTORCH_VER="${{ inputs.pytorch_version || env.DEFAULT_PYTORCH }}"
           CUDA_TAG="cu${{ steps.cuda.outputs.version_nodot }}"
-          pip install torch==${{ inputs.pytorch_version }}+${CUDA_TAG} --index-url https://download.pytorch.org/whl/${CUDA_TAG}
+          pip install torch==${PYTORCH_VER}+${CUDA_TAG} --index-url https://download.pytorch.org/whl/${CUDA_TAG}
           pip install wheel setuptools ninja
 
       - name: Verify setup
