@@ -9,9 +9,9 @@ on:
       cuda_version:
         description: 'CUDA version'
         required: true
-        default: '12.1.0'
+        default: '12.1'
         type: choice
-        options: ['11.8.0', '12.1.0', '12.4.0']
+        options: ['11.8', '12.1', '12.4']
       pytorch_version:
         description: 'PyTorch version'
         required: true
@@ -25,14 +25,13 @@ on:
         options: ['3.10', '3.11', '3.12']
 
 env:
-  # Default values when not triggered by workflow_dispatch
-  DEFAULT_CUDA: '12.1.0'
+  DEFAULT_CUDA: '12.1'
   DEFAULT_PYTORCH: '2.4.0'
   DEFAULT_PYTHON: '3.11'
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -47,33 +46,34 @@ jobs:
         with:
           python-version: ${{ inputs.python_version || env.DEFAULT_PYTHON }}
 
-      - name: Get CUDA version
-        id: cuda
+      - name: Get version info
+        id: versions
         run: |
           CUDA_VER="${{ inputs.cuda_version || env.DEFAULT_CUDA }}"
-          # Extract major.minor (e.g., "12.1" from "12.1.0")
-          CUDA_SHORT=$(echo $CUDA_VER | cut -d. -f1,2)
-          # Remove dots for PyTorch wheel tag (e.g., "121" from "12.1")
-          CUDA_NODOT=$(echo $CUDA_SHORT | tr -d '.')
-          echo "version=$CUDA_VER" >> $GITHUB_OUTPUT
-          echo "version_short=$CUDA_SHORT" >> $GITHUB_OUTPUT
-          echo "version_nodot=$CUDA_NODOT" >> $GITHUB_OUTPUT
+          CUDA_NODOT=$(echo $CUDA_VER | tr -d '.')
+          echo "cuda=$CUDA_VER" >> $GITHUB_OUTPUT
+          echo "cuda_nodot=$CUDA_NODOT" >> $GITHUB_OUTPUT
 
-      - name: Setup CUDA
-        uses: Jimver/cuda-toolkit@v0.2.16
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          df -h
+
+      - name: Install CUDA toolkit
+        uses: Jimver/cuda-toolkit@v0.2.19
+        id: cuda-toolkit
         with:
-          cuda: '${{ steps.cuda.outputs.version }}'
-          method: 'network'
-          sub-packages: '["nvcc", "cudart-dev"]'
+          cuda: '${{ steps.versions.outputs.cuda }}'
+          linux-local-args: '["--toolkit"]'
 
-      - name: Install PyTorch
+      - name: Install PyTorch and build tools
         run: |
           PYTORCH_VER="${{ inputs.pytorch_version || env.DEFAULT_PYTORCH }}"
-          CUDA_TAG="cu${{ steps.cuda.outputs.version_nodot }}"
+          CUDA_TAG="cu${{ steps.versions.outputs.cuda_nodot }}"
           pip install torch==${PYTORCH_VER}+${CUDA_TAG} --index-url https://download.pytorch.org/whl/${CUDA_TAG}
           pip install wheel setuptools ninja
 
-      - name: Verify CUDA setup
+      - name: Verify setup
         run: |
           nvcc --version
           python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.version.cuda}')"
@@ -89,16 +89,15 @@ jobs:
       - name: Build wheel
         run: |
           cd ${{ matrix.package }}
-          # Set CUDA architectures for broad compatibility
           export TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0"
-          export CUDA_HOME=$CUDA_PATH
+          export CUDA_HOME="${{ steps.cuda-toolkit.outputs.CUDA_PATH }}"
           python setup.py bdist_wheel
           ls -la dist/
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.package }}-linux-cu${{ steps.cuda.outputs.version_nodot }}-py${{ inputs.python_version || env.DEFAULT_PYTHON }}
+          name: ${{ matrix.package }}-linux-cu${{ steps.versions.outputs.cuda_nodot }}-py${{ inputs.python_version || env.DEFAULT_PYTHON }}
           path: ${{ matrix.package }}/dist/*.whl
           retention-days: 90
 
