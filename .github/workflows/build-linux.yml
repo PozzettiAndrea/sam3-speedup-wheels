@@ -5,29 +5,6 @@ on:
     branches: [main]
     tags: ['v*']
   workflow_dispatch:
-    inputs:
-      cuda_version:
-        description: 'CUDA version'
-        required: true
-        default: '12.1'
-        type: choice
-        options: ['11.8', '12.1', '12.4']
-      pytorch_version:
-        description: 'PyTorch version'
-        required: true
-        default: '2.4.0'
-        type: string
-      python_version:
-        description: 'Python version'
-        required: true
-        default: '3.11'
-        type: choice
-        options: ['3.10', '3.11', '3.12']
-
-env:
-  DEFAULT_CUDA: '12.1'
-  DEFAULT_PYTORCH: '2.4.0'
-  DEFAULT_PYTHON: '3.11'
 
 jobs:
   build:
@@ -37,21 +14,83 @@ jobs:
       fail-fast: false
       matrix:
         package: [torch_generic_nms, cc_torch]
+        include:
+          # CUDA 12.4 + PyTorch 2.5.1
+          - cuda: '12.4'
+            pytorch: '2.5.1'
+            python: '3.10'
+          - cuda: '12.4'
+            pytorch: '2.5.1'
+            python: '3.11'
+          - cuda: '12.4'
+            pytorch: '2.5.1'
+            python: '3.12'
+          # CUDA 12.6 + PyTorch 2.6.0
+          - cuda: '12.6'
+            pytorch: '2.6.0'
+            python: '3.10'
+          - cuda: '12.6'
+            pytorch: '2.6.0'
+            python: '3.11'
+          - cuda: '12.6'
+            pytorch: '2.6.0'
+            python: '3.12'
+          - cuda: '12.6'
+            pytorch: '2.6.0'
+            python: '3.13'
+          # CUDA 12.6 + PyTorch 2.8.1
+          - cuda: '12.6'
+            pytorch: '2.8.1'
+            python: '3.10'
+          - cuda: '12.6'
+            pytorch: '2.8.1'
+            python: '3.11'
+          - cuda: '12.6'
+            pytorch: '2.8.1'
+            python: '3.12'
+          - cuda: '12.6'
+            pytorch: '2.8.1'
+            python: '3.13'
+          # CUDA 12.8 + PyTorch 2.8.1
+          - cuda: '12.8'
+            pytorch: '2.8.1'
+            python: '3.10'
+          - cuda: '12.8'
+            pytorch: '2.8.1'
+            python: '3.11'
+          - cuda: '12.8'
+            pytorch: '2.8.1'
+            python: '3.12'
+          - cuda: '12.8'
+            pytorch: '2.8.1'
+            python: '3.13'
+          # CUDA 12.8 + PyTorch 2.9.1
+          - cuda: '12.8'
+            pytorch: '2.9.1'
+            python: '3.10'
+          - cuda: '12.8'
+            pytorch: '2.9.1'
+            python: '3.11'
+          - cuda: '12.8'
+            pytorch: '2.9.1'
+            python: '3.12'
+          - cuda: '12.8'
+            pytorch: '2.9.1'
+            python: '3.13'
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ inputs.python_version || env.DEFAULT_PYTHON }}
+          python-version: ${{ matrix.python }}
 
       - name: Get version info
         id: versions
         run: |
-          CUDA_VER="${{ inputs.cuda_version || env.DEFAULT_CUDA }}"
+          CUDA_VER="${{ matrix.cuda }}"
           CUDA_NODOT=$(echo $CUDA_VER | tr -d '.')
-          # For apt package (e.g., 12.1 -> 12-1)
           CUDA_APT=$(echo $CUDA_VER | tr '.' '-')
           echo "cuda=$CUDA_VER" >> $GITHUB_OUTPUT
           echo "cuda_nodot=$CUDA_NODOT" >> $GITHUB_OUTPUT
@@ -73,9 +112,8 @@ jobs:
 
       - name: Install PyTorch and build tools
         run: |
-          PYTORCH_VER="${{ inputs.pytorch_version || env.DEFAULT_PYTORCH }}"
           CUDA_TAG="cu${{ steps.versions.outputs.cuda_nodot }}"
-          pip install torch==${PYTORCH_VER}+${CUDA_TAG} --index-url https://download.pytorch.org/whl/${CUDA_TAG}
+          pip install torch==${{ matrix.pytorch }}+${CUDA_TAG} --index-url https://download.pytorch.org/whl/${CUDA_TAG}
           pip install wheel setuptools ninja
 
       - name: Verify setup
@@ -94,15 +132,36 @@ jobs:
       - name: Build wheel
         run: |
           cd ${{ matrix.package }}
-          export TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0"
+          export TORCH_CUDA_ARCH_LIST="7.5;8.6;8.9;9.0;10.0"
           python setup.py bdist_wheel
           ls -la dist/
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.package }}-linux-cu${{ steps.versions.outputs.cuda_nodot }}-py${{ inputs.python_version || env.DEFAULT_PYTHON }}
+          name: ${{ matrix.package }}-linux-cu${{ steps.versions.outputs.cuda_nodot }}-torch${{ matrix.pytorch }}-py${{ matrix.python }}
           path: ${{ matrix.package }}/dist/*.whl
+          retention-days: 90
+
+  collect:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: wheels
+          merge-multiple: true
+
+      - name: List all wheels
+        run: find wheels -name "*.whl" -type f | sort
+
+      - name: Upload combined artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-linux-wheels
+          path: wheels/*.whl
           retention-days: 90
 
   release:

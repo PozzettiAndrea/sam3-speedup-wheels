@@ -5,22 +5,6 @@ on:
     branches: [main]
     tags: ['v*']
   workflow_dispatch:
-    inputs:
-      cuda_version:
-        description: 'CUDA version'
-        required: true
-        default: '12.1'
-        type: choice
-        options: ['11.8', '12.1', '12.4']
-      pytorch_version:
-        description: 'PyTorch version'
-        required: true
-        default: '2.4.0'
-        type: string
-
-env:
-  DEFAULT_CUDA: '12.1'
-  DEFAULT_PYTORCH: '2.4.0'
 
 jobs:
   build:
@@ -30,7 +14,69 @@ jobs:
       fail-fast: false
       matrix:
         package: [torch_generic_nms, cc_torch]
-        python: ['3.10', '3.11', '3.12']
+        include:
+          # CUDA 12.4 + PyTorch 2.5.1
+          - cuda: '12.4'
+            pytorch: '2.5.1'
+            python: '3.10'
+          - cuda: '12.4'
+            pytorch: '2.5.1'
+            python: '3.11'
+          - cuda: '12.4'
+            pytorch: '2.5.1'
+            python: '3.12'
+          # CUDA 12.6 + PyTorch 2.6.0
+          - cuda: '12.6'
+            pytorch: '2.6.0'
+            python: '3.10'
+          - cuda: '12.6'
+            pytorch: '2.6.0'
+            python: '3.11'
+          - cuda: '12.6'
+            pytorch: '2.6.0'
+            python: '3.12'
+          - cuda: '12.6'
+            pytorch: '2.6.0'
+            python: '3.13'
+          # CUDA 12.6 + PyTorch 2.8.1
+          - cuda: '12.6'
+            pytorch: '2.8.1'
+            python: '3.10'
+          - cuda: '12.6'
+            pytorch: '2.8.1'
+            python: '3.11'
+          - cuda: '12.6'
+            pytorch: '2.8.1'
+            python: '3.12'
+          - cuda: '12.6'
+            pytorch: '2.8.1'
+            python: '3.13'
+          # CUDA 12.8 + PyTorch 2.8.1
+          - cuda: '12.8'
+            pytorch: '2.8.1'
+            python: '3.10'
+          - cuda: '12.8'
+            pytorch: '2.8.1'
+            python: '3.11'
+          - cuda: '12.8'
+            pytorch: '2.8.1'
+            python: '3.12'
+          - cuda: '12.8'
+            pytorch: '2.8.1'
+            python: '3.13'
+          # CUDA 12.8 + PyTorch 2.9.1
+          - cuda: '12.8'
+            pytorch: '2.9.1'
+            python: '3.10'
+          - cuda: '12.8'
+            pytorch: '2.9.1'
+            python: '3.11'
+          - cuda: '12.8'
+            pytorch: '2.9.1'
+            python: '3.12'
+          - cuda: '12.8'
+            pytorch: '2.9.1'
+            python: '3.13'
 
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +90,7 @@ jobs:
         id: cuda
         shell: bash
         run: |
-          CUDA_VER="${{ inputs.cuda_version || env.DEFAULT_CUDA }}"
+          CUDA_VER="${{ matrix.cuda }}"
           CUDA_NODOT=$(echo $CUDA_VER | tr -d '.')
           echo "version=$CUDA_VER" >> $GITHUB_OUTPUT
           echo "version_nodot=$CUDA_NODOT" >> $GITHUB_OUTPUT
@@ -52,24 +98,20 @@ jobs:
       - name: Install CUDA toolkit
         shell: powershell
         run: |
-          $CUDA_VERSION = "${{ steps.cuda.outputs.version }}"
+          $CUDA_VERSION = "${{ matrix.cuda }}"
           $CUDA_VERSION_FULL = switch ($CUDA_VERSION) {
-            "11.8" { "11.8.0" }
-            "12.1" { "12.1.1" }
             "12.4" { "12.4.1" }
+            "12.6" { "12.6.3" }
+            "12.8" { "12.8.1" }
           }
-          $CUDA_VERSION_NODOT = $CUDA_VERSION -replace '\.', ''
 
           Write-Host "Installing CUDA $CUDA_VERSION_FULL"
 
-          # Download CUDA installer
-          $installerUrl = "https://developer.download.nvidia.com/compute/cuda/$CUDA_VERSION_FULL/local_installers/cuda_${CUDA_VERSION_FULL}_windows.exe"
-          if ($CUDA_VERSION -eq "11.8") {
-            $installerUrl = "https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_522.06_windows.exe"
-          } elseif ($CUDA_VERSION -eq "12.1") {
-            $installerUrl = "https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_531.14_windows.exe"
-          } elseif ($CUDA_VERSION -eq "12.4") {
-            $installerUrl = "https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda_12.4.1_551.78_windows.exe"
+          # Download CUDA installer - use exact URLs from NVIDIA
+          $installerUrl = switch ($CUDA_VERSION) {
+            "12.4" { "https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda_12.4.1_551.78_windows.exe" }
+            "12.6" { "https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_561.17_windows.exe" }
+            "12.8" { "https://developer.download.nvidia.com/compute/cuda/12.8.1/local_installers/cuda_12.8.1_572.61_windows.exe" }
           }
 
           Write-Host "Downloading from $installerUrl"
@@ -77,7 +119,7 @@ jobs:
 
           # Install silently - only nvcc and cudart (what we need for building)
           Write-Host "Installing CUDA toolkit..."
-          Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "nvcc_$CUDA_VERSION_FULL", "cudart_$CUDA_VERSION_FULL" -Wait -NoNewWindow
+          Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "nvcc_$CUDA_VERSION_FULL", "cudart_$CUDA_VERSION_FULL", "visual_studio_integration_$CUDA_VERSION_FULL" -Wait -NoNewWindow
 
           # Add to PATH
           $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v$CUDA_VERSION"
@@ -88,9 +130,8 @@ jobs:
       - name: Install PyTorch
         shell: bash
         run: |
-          PYTORCH_VER="${{ inputs.pytorch_version || env.DEFAULT_PYTORCH }}"
           CUDA_TAG="cu${{ steps.cuda.outputs.version_nodot }}"
-          pip install torch==${PYTORCH_VER}+${CUDA_TAG} --index-url https://download.pytorch.org/whl/${CUDA_TAG}
+          pip install torch==${{ matrix.pytorch }}+${CUDA_TAG} --index-url https://download.pytorch.org/whl/${CUDA_TAG}
           pip install wheel setuptools ninja
 
       - name: Verify setup
@@ -110,14 +151,14 @@ jobs:
         shell: cmd
         run: |
           cd ${{ matrix.package }}
-          set TORCH_CUDA_ARCH_LIST=7.0;7.5;8.0;8.6;8.9;9.0
+          set TORCH_CUDA_ARCH_LIST=7.5;8.6;8.9;9.0;10.0
           python setup.py bdist_wheel
           dir dist
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.package }}-windows-cu${{ steps.cuda.outputs.version_nodot }}-py${{ matrix.python }}
+          name: ${{ matrix.package }}-windows-cu${{ steps.cuda.outputs.version_nodot }}-torch${{ matrix.pytorch }}-py${{ matrix.python }}
           path: ${{ matrix.package }}/dist/*.whl
           retention-days: 90
 
@@ -138,6 +179,6 @@ jobs:
       - name: Upload combined artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: all-windows-wheels-cu${{ inputs.cuda_version }}
+          name: all-windows-wheels
           path: wheels/*.whl
           retention-days: 90

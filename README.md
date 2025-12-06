@@ -24,41 +24,45 @@ python speedup.py
 
 ### Manual Installation
 
-Find your CUDA version:
+Find your CUDA and PyTorch versions:
 ```bash
-python -c "import torch; print(torch.version.cuda)"
+python -c "import torch; print(f'CUDA: {torch.version.cuda}'); print(f'PyTorch: {torch.__version__}')"
 ```
 
 Then install with the matching wheels:
 
 ```bash
-# CUDA 12.1 (most common)
-pip install torch_generic_nms cc_torch --find-links https://pozzettiandrea.github.io/sam3-speedup-wheels/cu121/
+# CUDA 12.6 + PyTorch 2.8.x (recommended for most users)
+pip install torch_generic_nms cc_torch --find-links https://pozzettiandrea.github.io/sam3-speedup-wheels/cu126/
 
-# CUDA 12.4
+# CUDA 12.8 + PyTorch 2.9.x (latest)
+pip install torch_generic_nms cc_torch --find-links https://pozzettiandrea.github.io/sam3-speedup-wheels/cu128/
+
+# CUDA 12.4 + PyTorch 2.5.x (stable fallback)
 pip install torch_generic_nms cc_torch --find-links https://pozzettiandrea.github.io/sam3-speedup-wheels/cu124/
-
-# CUDA 11.8
-pip install torch_generic_nms cc_torch --find-links https://pozzettiandrea.github.io/sam3-speedup-wheels/cu118/
 ```
 
 ## Available Builds
 
 | CUDA | PyTorch | Python | Linux | Windows |
 |------|---------|--------|-------|---------|
-| 11.8 | 2.3.x | 3.10, 3.11, 3.12 | ✅ | ✅ |
-| 12.1 | 2.4.x | 3.10, 3.11, 3.12 | ✅ | ✅ |
-| 12.4 | 2.5.x | 3.10, 3.11, 3.12 | ✅ | ✅ |
+| 12.4 | 2.5.1 | 3.10, 3.11, 3.12 | ✅ | ✅ |
+| 12.6 | 2.6.0 | 3.10, 3.11, 3.12, 3.13 | ✅ | ✅ |
+| 12.6 | 2.8.1 | 3.10, 3.11, 3.12, 3.13 | ✅ | ✅ |
+| 12.8 | 2.8.1 | 3.10, 3.11, 3.12, 3.13 | ✅ | ✅ |
+| 12.8 | 2.9.1 | 3.10, 3.11, 3.12, 3.13 | ✅ | ✅ |
 
 ## GPU Architecture Support
 
 Wheels are compiled for the following CUDA architectures:
-- SM 7.0 (Volta - V100)
-- SM 7.5 (Turing - RTX 20 series)
-- SM 8.0 (Ampere - A100)
-- SM 8.6 (Ampere - RTX 30 series)
-- SM 8.9 (Ada Lovelace - RTX 40 series)
-- SM 9.0 (Hopper - H100)
+
+| Compute Capability | Architecture | GPUs |
+|--------------------|--------------|------|
+| SM 7.5 | Turing | RTX 20 series |
+| SM 8.6 | Ampere | RTX 30 series |
+| SM 8.9 | Ada Lovelace | RTX 40 series |
+| SM 9.0 | Hopper | H100 |
+| SM 10.0 | Blackwell | RTX 50 series |
 
 ## Why Pre-built Wheels?
 
