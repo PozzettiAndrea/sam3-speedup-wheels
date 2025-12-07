@@ -14,6 +14,10 @@ env:
 jobs:
   build-linux:
     runs-on: ubuntu-22.04
+    container:
+      image: nvidia/cuda:12.4.0-devel-ubuntu22.04
+    env:
+      CUDA_HOME: /usr/local/cuda
     strategy:
       fail-fast: false
       matrix:
@@ -27,20 +31,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          df -h
-
-      - name: Install CUDA toolkit
-        run: |
-          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
-          sudo dpkg -i cuda-keyring_1.1-1_all.deb
-          sudo apt-get update
-          sudo apt-get -y install cuda-toolkit-12-4
-          echo "/usr/local/cuda-12.4/bin" >> $GITHUB_PATH
-          echo "CUDA_HOME=/usr/local/cuda-12.4" >> $GITHUB_ENV
 
       - name: Install PyTorch and build tools
         run: |
@@ -86,12 +76,24 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Install CUDA toolkit
+      - name: Cache CUDA installer
+        uses: actions/cache@v4
+        id: cuda-cache
+        with:
+          path: cuda_installer.exe
+          key: cuda-12.4.1-windows-installer
+
+      - name: Download CUDA installer
+        if: steps.cuda-cache.outputs.cache-hit != 'true'
         shell: powershell
         run: |
           $installerUrl = "https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda_12.4.1_551.78_windows.exe"
           Write-Host "Downloading CUDA 12.4 from $installerUrl"
           Invoke-WebRequest -Uri $installerUrl -OutFile "cuda_installer.exe" -UseBasicParsing
+
+      - name: Install CUDA toolkit
+        shell: powershell
+        run: |
           Write-Host "Installing CUDA toolkit..."
           Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_12.4", "cudart_12.4", "visual_studio_integration_12.4" -Wait -NoNewWindow
           $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.4"
