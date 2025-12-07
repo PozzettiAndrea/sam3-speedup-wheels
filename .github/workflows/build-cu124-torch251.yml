@@ -27,15 +27,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
+      - name: Install Python ${{ matrix.python }}
+        run: |
+          apt-get update
+          apt-get install -y software-properties-common git curl
+          add-apt-repository -y ppa:deadsnakes/ppa
+          apt-get update
+          apt-get install -y python${{ matrix.python }} python${{ matrix.python }}-venv python${{ matrix.python }}-dev
+          curl -sS https://bootstrap.pypa.io/get-pip.py | python${{ matrix.python }}
+          update-alternatives --install /usr/bin/python python /usr/bin/python${{ matrix.python }} 1
+          update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${{ matrix.python }} 1
 
       - name: Install PyTorch and build tools
         run: |
-          pip install torch==${{ env.PYTORCH_VERSION }}+cu124 --index-url https://download.pytorch.org/whl/cu124
-          pip install wheel setuptools ninja
+          python -m pip install --upgrade pip
+          python -m pip install torch==${{ env.PYTORCH_VERSION }}+cu124 --index-url https://download.pytorch.org/whl/cu124
+          python -m pip install wheel setuptools ninja
 
       - name: Verify setup
         run: |
