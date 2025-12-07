@@ -25,6 +25,16 @@ jobs:
         python: ['3.10', '3.11', '3.12', '3.13']
 
     steps:
+      - name: Free disk space
+        run: |
+          df -h
+          apt-get remove -y --purge '^dotnet-.*' '^llvm-.*' 'php.*' '^mongodb-.*' '^mysql-.*' azure-cli google-cloud-sdk google-chrome-stable firefox powershell mono-devel || true
+          apt-get autoremove -y || true
+          apt-get clean || true
+          rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* || true
+          rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache || true
+          df -h
+
       - uses: actions/checkout@v4
 
       - name: Install Python ${{ matrix.python }}
