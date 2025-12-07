@@ -1,4 +1,4 @@
-name: Build CUDA 12.6 + PyTorch 2.8.1
+name: Build CUDA 12.6 + PyTorch 2.8.0
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
 
 env:
   CUDA_VERSION: '12.6'
-  PYTORCH_VERSION: '2.8.1'
-  TORCH_CUDA_ARCH_LIST: '7.5;8.6;8.9;9.0;10.0'
+  PYTORCH_VERSION: '2.8.0'
+  TORCH_CUDA_ARCH_LIST: '7.5;8.6;8.9;9.0'
 
 jobs:
   build-linux:
@@ -66,7 +66,7 @@ jobs:
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.package }}-linux-cu126-torch281-py${{ matrix.python }}
+          name: ${{ matrix.package }}-linux-cu126-torch280-py${{ matrix.python }}
           path: ${{ matrix.package }}/dist/*.whl
           retention-days: 90
 
@@ -128,14 +128,14 @@ jobs:
         shell: cmd
         run: |
           cd ${{ matrix.package }}
-          set TORCH_CUDA_ARCH_LIST=7.5;8.6;8.9;9.0;10.0
+          set TORCH_CUDA_ARCH_LIST=7.5;8.6;8.9;9.0
           python setup.py bdist_wheel
           dir dist
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.package }}-windows-cu126-torch281-py${{ matrix.python }}
+          name: ${{ matrix.package }}-windows-cu126-torch280-py${{ matrix.python }}
           path: ${{ matrix.package }}/dist/*.whl
           retention-days: 90
 
@@ -155,6 +155,6 @@ jobs:
       - name: Upload combined artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: all-cu126-torch281-wheels
+          name: all-cu126-torch280-wheels
           path: wheels/*.whl
           retention-days: 90
