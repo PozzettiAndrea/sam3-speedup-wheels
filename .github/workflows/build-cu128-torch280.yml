@@ -23,6 +23,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+          df -h
+
       - name: Setup Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
@@ -50,7 +59,7 @@ jobs:
       - name: Install CUDA PyTorch and build tools
         run: |
           pip install --no-cache-dir torch==${{ env.PYTORCH_VERSION }} --index-url https://download.pytorch.org/whl/cu128
-          pip install wheel setuptools ninja
+          pip install --no-cache-dir wheel setuptools ninja
 
       - name: Verify setup
         run: |
@@ -122,8 +131,8 @@ jobs:
       - name: Install CUDA PyTorch and build tools
         shell: bash
         run: |
-          pip install torch==${{ env.PYTORCH_VERSION }} --index-url https://download.pytorch.org/whl/cu128
-          pip install wheel setuptools ninja
+          pip install --no-cache-dir torch==${{ env.PYTORCH_VERSION }} --index-url https://download.pytorch.org/whl/cu128
+          pip install --no-cache-dir wheel setuptools ninja
 
       - name: Verify setup
         run: |
