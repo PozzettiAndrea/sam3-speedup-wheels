@@ -59,12 +59,11 @@ jobs:
           echo "CUDA_HOME=$CUDA_HOME"
 
       - name: Clone and build ${{ matrix.package }}
-        env:
-          FORCE_CUDA: "1"
-          CUDA_HOME: /usr/local/cuda-12.6
-          CUDA_PATH: /usr/local/cuda-12.6
-          TORCH_CUDA_ARCH_LIST: ${{ env.TORCH_CUDA_ARCH_LIST }}
         run: |
+          export CUDA_HOME=/usr/local/cuda-12.6
+          export CUDA_PATH=/usr/local/cuda-12.6
+          export FORCE_CUDA=1
+          export TORCH_CUDA_ARCH_LIST="${{ env.TORCH_CUDA_ARCH_LIST }}"
           if [ "${{ matrix.package }}" = "torch_generic_nms" ]; then
             git clone https://github.com/ronghanghu/torch_generic_nms.git
           else
