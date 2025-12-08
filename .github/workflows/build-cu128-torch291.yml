@@ -134,6 +134,21 @@ jobs:
           pip install --no-cache-dir torch==${{ env.PYTORCH_VERSION }} --index-url https://download.pytorch.org/whl/cu128
           pip install --no-cache-dir wheel setuptools ninja
 
+      - name: Patch PyTorch header for Windows MSVC bug
+        shell: bash
+        run: |
+          # Fix for https://github.com/pytorch/pytorch/issues/166123
+          TORCH_PATH=$(python -c "import torch; print(torch.__path__[0])")
+          HEADER_FILE="$TORCH_PATH/include/torch/csrc/dynamo/compiled_autograd.h"
+          if [ -f "$HEADER_FILE" ]; then
+            echo "Patching $HEADER_FILE for MSVC std:: ambiguity bug"
+            sed -i 's/} else if constexpr (::std::is_same_v<T, ::std::string>) {/\/\/ PATCHED: } else if constexpr (::std::is_same_v<T, ::std::string>) {/' "$HEADER_FILE"
+            sed -i 's/return at::StringType::get();/\/\/ PATCHED: return at::StringType::get();/' "$HEADER_FILE"
+            echo "Patch applied successfully"
+          else
+            echo "Warning: Header file not found at $HEADER_FILE"
+          fi
+
       - name: Verify setup
         run: |
           nvcc --version
